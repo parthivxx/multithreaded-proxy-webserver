@@ -50,12 +50,14 @@ cache_element* head;
 
 int cache_size;
 
-
+int handle_request(int client_socket_id , struct ParsedRequest* request , char* temp_request){
+    
+}
 void* thread_fn(void* socket_new){
     sem_wait(&semaphore);
     int p;
     sem_getvalue(&semaphore , &p);
-    printf("Semaphore value is %d\n" , p);
+    printf("Semaphore wait value is %d\n" , p);
     int* t = (int *) socket_new;
     int socket = *t;
     int byte_send_client = 0, len;
@@ -106,11 +108,30 @@ void* thread_fn(void* socket_new){
             bzero(buffer , sizeof(buffer));
             if(!strcmp(request->method , "GET")){
                 if(request->host && request->path && checkHTTPversion(request->version) == 1){
-                    // byte_send_client = handle_request(socket , )
+                    byte_send_client = handle_request(socket , request , temp_request);
+                    if(byte_send_client < 0){
+                        sendErrorMessage(socket , 500);
+                    }
+                }else{
+                    sendErrorMessage(socket , 500);
                 }
+            }else{
+                printf("This server currently doesn't support any method except GET\n");
             }
         }
+
+        ParsedRequest_destroy(request);
+    }else if(byte_send_client == 0){
+        printf("Client is disconnected\n");
     }
+    shutdown(socket , SHUT_RDWR);
+    close(socket);
+    free(buffer);
+    sem_post(&semaphore);
+    sem_getvalue(&semaphore , &p);
+    printf("Semaphore post value is %d\n" , p);
+    free(temp_request);
+    return NULL;
 }
 
 
